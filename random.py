@@ -4,41 +4,58 @@ import sys
 
 import entropy
 import hashlib
+import binascii
+
+pool_size = 256
 
 def hash(x):
-    return hashlib.sha256(hashlib.sha256(x).digest).digest()
+    return hashlib.sha256(bytearray(hashlib.sha256(x).digest())).digest()
 
 # TODO: Crediting and debiting from the entropy pool should be
 #       thread safe. 
 class EntropyPoolBase:
-    def __init__(self, size, min_entropy):
+    def __init__(self, min_entropy):
         # TODO: Initialize entropy pool from state of last pool
         #       by saving pool to disk on destruction
         print("Initializing entropy pool")
-        self.pool = bytearray(size)
+        self.pool = bytearray(pool_size)
         self.entropy_estimate = 0
+        self.min_entropy = min_entropy
         
-    def mix_pool_bytes(self, bytes):
+    def _mix_pool_bytes(self, bytes):
         raise NotImplementedException()
 
-    def increase_estimate(self, n_bits):
+    def _increase_estimate(self, n_bits):
         raise NotImplementedException()
 
-    def decrease_estimate(self, n_bits):
+    def _decrease_estimate(self, n_bits):
         raise NotImplementedException()
 
-    def debit_randomness(self, n_bytes):
-        if (self.entropy <= min_entropy):
-            decrease_estimate(self, n_bytes * 8)
+    def debit_randomness(self):
+        if (self.entropy_estimate > self.min_entropy):
+            self._decrease_estimate(pool_size * 8)
             hashed = hash(self.pool)
-            self.mix_pool_bytes(hashed)
+            self._mix_pool_bytes(hashed)
             return hashed
         else:
             return None
             
-    def credit_randomness(value):
-        self.pool = mix_pool_bytes(value, bytes)
-        increase_estimate(self, len(value) * 8)
+    def credit_randomness(self, value):
+        self._mix_pool_bytes(value)
+        self._increase_estimate(len(value) * 8)
+
+class SimpleEntropyPool(EntropyPoolBase):
+    def _mix_pool_bytes(self, bytes):
+        sha256 = hashlib.sha256()
+        sha256.update(bytes)
+        sha256.update(self.pool)
+        self.pool = bytearray(sha256.digest())
+
+    def _increase_estimate(self, n_bits):
+        self.entropy_estimate += n_bits
+
+    def _decrease_estimate(self, n_bits):
+        self.entropy_estimate -= n_bits
         
 if __name__ == '__main__':
 
@@ -65,6 +82,16 @@ if __name__ == '__main__':
         print("Testing entropy pool")
         print("*********************")
 
-        print("Entropy pool {}".format(EntropyPoolBase(256 // 8, 256)))
+        pool = SimpleEntropyPool(10)
+        print("Entropy pool {}".format(pool))
+
+        print("Adding integers to pool...")
+        for i in range(20):
+            print("I: {}".format(i))
+            pool.credit_randomness(bytes(i))
+
+        print("Debiting randomness")
+        print(pool.debit_randomness())
+        
     else:
         print("Unexpected input")        
