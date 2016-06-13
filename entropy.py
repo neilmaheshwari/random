@@ -1,17 +1,5 @@
 import psutil
 
-# Returns the seconds the CPU has spent in user mode
-# TODO: Use nano or milliseconds
-def cpu_user_time():
-    time = psutil.cpu_times().user
-    return time
-
-# Returns the system-wide CPU utilization as a percentage for each
-# CPU. Blocks for i seconds. 
-def cpu_utilization_percentages(i):
-    percents = psutil.cpu_times_percent(interval = i)
-    return percents
-
 # Returns the system-wide number of reads
 def read_count():
     count = psutil.disk_io_counters().read_count

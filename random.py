@@ -5,6 +5,7 @@ import sys
 import entropy
 import hashlib
 import binascii
+import time
 
 pool_size = 256
 
@@ -56,21 +57,53 @@ class SimpleEntropyPool(EntropyPoolBase):
 
     def _decrease_estimate(self, n_bits):
         self.entropy_estimate -= n_bits
+
+def credit_all_randomness(pool):
+    read_count = entropy.read_count()
+    write_count = entropy.write_count()
+
+    # TODO: Network IO functions block sometimes.
+    # Figure out why
+    # bytes_sent = entropy.bytes_sent()
+    # bytes_recv = entropy.bytes_recv()
+    
+    interrupts_count = entropy.interrupts_count()
+    ctx_switches = entropy.ctx_switches()
+
+    sources = [
+        read_count,
+        write_count,
+        # bytes_sent,
+        # bytes_recv,
+        interrupts_count,
+        ctx_switches
+    ]
+
+    for source in sources:
+        pool.credit_randomness(bytes(source))
         
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
-        print(psutil.cpu_times())
-    elif (sys.argv[1] == "test"):
+        pool = SimpleEntropyPool(100)
+        try:
+            while True:
+                blob = pool.debit_randomness()
+                if(blob == None):
+                    time.sleep(0.5)
+                    credit_all_randomness(pool)
+                else:
+                    print(blob.decode('ascii', errors="ignore"), end="")
+        except KeyboardInterrupt:
+            print("\nGood bye!")
+            pass
         
+    elif (sys.argv[1] == "test"):
         print("*********************")
         print("    Testing stats")
         print("*********************")
         
-        print("CPU user time: {}".format(
-            entropy.cpu_user_time()))
-        print("CPU utilization: {}".format(
-            entropy.cpu_utilization_percentages(0.1)))
+ 
         print("Read count: {}".format(entropy.read_count()))
         print("Write count: {}".format(entropy.write_count()))
         print("Bytes sent: {}".format(entropy.bytes_sent()))
@@ -87,7 +120,6 @@ if __name__ == '__main__':
 
         print("Adding integers to pool...")
         for i in range(20):
-            print("I: {}".format(i))
             pool.credit_randomness(bytes(i))
 
         print("Debiting randomness")
