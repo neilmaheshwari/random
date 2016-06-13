@@ -20,7 +20,6 @@ class EntropyPoolBase:
     def __init__(self, min_entropy):
         # TODO: Initialize entropy pool from state of last pool
         #       by saving pool to disk on destruction
-        print("Initializing entropy pool")
         self.pool = bytearray(pool_size)
         self.entropy_estimate = 0
         self.min_entropy = min_entropy
