@@ -13,7 +13,9 @@ def hash(x):
     return hashlib.sha256(bytearray(hashlib.sha256(x).digest())).digest()
 
 # TODO: Crediting and debiting from the entropy pool should be
-#       thread safe. 
+#       thread safe.
+
+# Base class for constructing an entropy pool
 class EntropyPoolBase:
     def __init__(self, min_entropy):
         # TODO: Initialize entropy pool from state of last pool
@@ -32,6 +34,8 @@ class EntropyPoolBase:
     def _decrease_estimate(self, n_bits):
         raise NotImplementedException()
 
+    # Debit random bits from the entropy pool and adjust the entropy
+    # estimate
     def debit_randomness(self):
         if (self.entropy_estimate > self.min_entropy):
             self._decrease_estimate(pool_size * 8)
@@ -40,11 +44,16 @@ class EntropyPoolBase:
             return hashed
         else:
             return None
-            
+
+    # Credit random bits to the entropy pool and adjust the entropy
+    # estimate
     def credit_randomness(self, value):
         self._mix_pool_bytes(value)
         self._increase_estimate(len(value) * 8)
 
+# Simple implementation of entropy pool with naive implementations
+# for mixing the entropy pool and updating the estimates of the
+# entropy in the pool
 class SimpleEntropyPool(EntropyPoolBase):
     def _mix_pool_bytes(self, bytes):
         sha256 = hashlib.sha256()
@@ -95,9 +104,8 @@ if __name__ == '__main__':
                 else:
                     print(blob.decode('ascii', errors="ignore"), end="")
         except KeyboardInterrupt:
-            print("\nGood bye!")
             pass
-        
+
     elif (sys.argv[1] == "test"):
         print("*********************")
         print("    Testing stats")
